@@ -582,7 +582,11 @@ const STATION_REL=[ /* [place, dx, dy, type, name] */
   [7,170,-60,'wires','Reroute Lava Cooling'],
   [9,-10,-170,'wires','Align Radio Dish'],
   [10,-60,-170,'hold','Fill the Silo'],
-  [11,0,20,'match','Decode Canyon Relay']
+  [11,0,20,'match','Decode Canyon Relay'],
+  [0,-140,-90,'switches','Reboot the Landing Lights'],[1,120,120,'zap','Charge the Crane'],[2,-130,-60,'match','Match Relic Glyphs'],
+  [3,140,120,'simon','Tune the Radio'],[4,-170,90,'code','Hack the Billboard'],[5,-110,70,'hold','Pump the Well'],
+  [6,-100,-60,'pipes','Route the Heating'],[7,-120,150,'dial','Aim the Cooling Fan'],[8,110,40,'wires','Fix the Bridge Lights'],
+  [9,110,-90,'slide','Realign the Antenna'],[10,120,60,'switches','Start the Combine'],[11,-110,-40,'simon','Calibrate the Canyon Drill']
 ];
 const VENT_REL=[[1,-190,150],[2,200,-140],[3,-200,110],[4,0,-110],[5,-230,-110],[6,200,-90],[7,-230,40],[8,190,-120],[9,-170,-40],[10,-210,-120],[11,180,70]];
 const STATIONS=STATION_REL.map((s,i)=>({id:i,place:s[0],x:POIS[s[0]].x+s[1],y:POIS[s[0]].y+s[2],type:s[3],name:s[4]}));
@@ -787,7 +791,7 @@ function cloneModel(name,rc){
   return o;
 }
 function lerpAng(a,b,t){let d=((b-a+Math.PI)%(Math.PI*2)+Math.PI*2)%(Math.PI*2)-Math.PI;return a+d*t}
-const VIS_R=()=>me&&me.imp?720:(G&&G.sab&&G.sab.on?170:640);
+const VIS_R=()=>me&&me.imp?900:(G&&G.sab&&G.sab.on?190:820);
 
 /* ---------- terrain texture ---------- */
 const TK=3072/WORLD.w;
@@ -1061,8 +1065,7 @@ function canSee(p){
   if(!p.alive&&!(clock<(p.fxUntil||0)))return false;
   if(!me.alive)return true;
   if(dist(p,me)>VIS_R()+30)return false;
-  if(clock-(p._st||-9)>.12){p._st=clock;p._sv=clear(me.x,me.y,p.x,p.y)}
-  return p._sv;
+  return true;
 }
 function equip(a,w,until){
   if(a.weapon){a.holder.remove(a.weapon);a.weapon=null}
@@ -1118,7 +1121,7 @@ function updateBodies(dt){
     }
     if(b.fly){const f=b.fly;f.t+=dt;if(f.t<f.dur){const k=f.t/f.dur;f.x=f.x0+(b.x-f.x0)*k;f.y=f.y0+(b.y-f.y0)*k;f.h=Math.sin(k*Math.PI)*70;m.userData.inner.rotation.x=f.t*9;m.rotation.y+=dt*3}else{b.fly=null;m.userData.inner.rotation.x=0;f.h=0;f.x=b.x;f.y=b.y;splat(b.x,b.y,rnd(-1,1),rnd(-1,1),.7)}m.position.set(f.x,f.h,f.y)}
     else m.position.set(b.x,0,b.y);
-    if(!me.alive)m.visible=true;else if(dist(b,me)>VIS_R()+40)m.visible=false;else{if(clock-(b._st||-9)>.15){b._st=clock;b._sv=clear(me.x,me.y,b.x,b.y)}m.visible=b._sv}
+    if(!me.alive)m.visible=true;else if(dist(b,me)>VIS_R()+40)m.visible=false;else m.visible=true
   }
   for(const [id,m] of BODYM)if(!ids.has(id)){scene.remove(m);BODYM.delete(id)}
 }
@@ -1158,7 +1161,7 @@ function updateCamera(dt){
   const k=1-Math.exp(-dt*6.5);
   cam.x+=(me.x+(me.vx||0)*.22-cam.x)*k;cam.y+=(me.y+(me.vy||0)*.22-cam.y)*k;
   cam.zoom+=(SAVE.zoom*(me.sprint?1.07:1)-cam.zoom)*(1-Math.exp(-dt*4));
-  const d=(W<700?860:720)*cam.zoom,sh=SAVE.shake?cam.shake:0,sx=(Math.random()-.5)*sh,sz=(Math.random()-.5)*sh;
+  const d=(W<700?1060:900)*cam.zoom,sh=SAVE.shake?cam.shake:0,sx=(Math.random()-.5)*sh,sz=(Math.random()-.5)*sh;
   camera.position.set(cam.x+sx,d*.80,cam.y+d*.60+sz);camera.lookAt(cam.x+sx*.3,12,cam.y+sz*.3);
   cam.shake=Math.max(0,cam.shake-dt*38);
 }
@@ -2057,7 +2060,7 @@ let G=null,me=null,M=null;
 const K={},stick={x:0,y:0};
 const NET={mode:'solo',room:null,code:'',isHost:true,mePid:0,imps:2,unsubs:[]};
 const COLORS=[{n:'Red',c:'#e5484d'},{n:'Blue',c:'#3e7bfa'},{n:'Lime',c:'#7ed957'},{n:'Yellow',c:'#f5c542'},{n:'Pink',c:'#ee7bd2'},{n:'Cyan',c:'#35c9d6'},{n:'Orange',c:'#ff8a1f'},{n:'White',c:'#eef0f7'},{n:'Purple',c:'#9b5cff'},{n:'Brown',c:'#a0663c'}];
-const MAXP=10,TASKS_EACH=5;
+const MAXP=10,TASKS_EACH=7;
 const STAND=STATIONS.map(s=>{const c=nearestFree(s.x,s.y+42);return c?{x:c[0]*CELL+CELL/2,y:c[1]*CELL+CELL/2}:freePos(s.x,s.y+42)});
 const BOT_SPEED=150,ME_SPEED=205;
 const spawnPos=i=>{const a=i*Math.PI*2/MAXP+.4;return freePos(BUTTON.x+Math.cos(a)*165,BUTTON.y+Math.sin(a)*165)};
@@ -2170,6 +2173,7 @@ function applySnap(d){
 }
 function sendSnap(){
   if(!NET.room)return;
+  recountTasks();
   const a=G.players.reduce((s,p,i)=>s|(p.alive?1<<i:0),0);
   NET.room.emit('snap',{d:G.done,tot:G.total,a,b:G.players.filter(p=>!p.human).map(p=>[p.id,Math.round(p.x),Math.round(p.y),Math.round(p.ang*100),p.moving?1:0,Math.round(p.jy||0)]),k:G.players.filter(p=>p.human&&p.imp).map(p=>[p.id,Math.max(0,Math.ceil(p.kcd))])}).catch(()=>{});
 }
@@ -2189,7 +2193,7 @@ function startGameHost(humans,imps){
   NET.mePid=order[0];me=players[NET.mePid];me.me=true;me.skin=skinById(SAVE.skin);
   const impIds=shuffle(players.map(p=>p.id)).slice(0,imps);
   players.forEach(p=>{p.imp=impIds.includes(p.id);p.tasks=shuffle(STATIONS.map(s=>s.id)).slice(0,TASKS_EACH)});
-  G=newG(players);G.total=players.filter(p=>!p.imp).length*TASKS_EACH;
+  G=newG(players);recountTasks();
   NET.imps=imps;
   $('#hud').hidden=false;
   emitEv('start',{slots:players.map(p=>({n:p.name,peer:p.peer,sk:p.skin.id,fm:p.form}))});
@@ -2279,7 +2283,7 @@ function handleEv(type,d){
 function handleAct(pid,type,d){
   if(!G)return;const p=G.players[pid];if(!p)return;
   switch(type){
-    case 'task':if(G.phase==='play'&&p.tasks.includes(d.id)&&!p.doneT.has(d.id)){p.doneT.add(d.id);G.done++;checkWin()}break;
+    case 'task':if(G.phase==='play'&&p.tasks.includes(d.id)&&!p.doneT.has(d.id)){p.doneT.add(d.id);checkWin()}break;
     case 'kill':{
       const v=G.players[d.v];
       if(G.phase!=='play'||!p.imp||!p.alive||!v||!v.alive||v.imp||p.kcd>0||dist(p,v)>150)break;
@@ -2318,10 +2322,10 @@ const duelById=id=>G&&G.duelList?G.duelList.find(d=>d.id===id):null;
 const duelOf=pid=>G&&G.duelList?G.duelList.find(d=>!d.over&&(d.a===pid||d.b===pid)):null;
 const myDuel=()=>me?duelOf(me.id):null;
 const DUEL_RADIUS=300;
-/* Every kill attempt rolls on its own: a 1 in 5 chance the crewmate fights back. The fight happens in a sealed arena out on the water,
+/* Every kill attempt rolls on its own: a 1 in 3 chance the crewmate fights back. The fight happens in a sealed arena out on the water,
    so nobody else sees who fought or which of them was the impostor. */
 function attemptKill(k,v){
-  if(k.inDuel||v.inDuel||Math.random()>=.2){killPlayer(k,v);return}
+  if(k.inDuel||v.inDuel||Math.random()>=1/3){killPlayer(k,v);return}
   startDuel(k,v);
 }
 function startDuel(a,b){
@@ -2388,10 +2392,13 @@ function killPlayer(killer,v,weapon,opts){
   }
   checkWin();
 }
+/* progress counts only crewmates who are still alive: when every one of them has finished all their tasks, the crew wins */
+function recountTasks(){let d=0,t=0;for(const p of G.players){if(p.imp||!p.alive)continue;t+=p.tasks.length;d+=Math.min(p.doneT.size,p.tasks.length)}G.done=d;G.total=t}
 function checkWin(){
   if(!NET.isHost||!G||G.phase==='over')return false;
+  recountTasks();
   const imps=G.players.filter(p=>p.alive&&p.imp).length,crew=G.players.filter(p=>p.alive&&!p.imp).length;
-  let w=null;if(imps===0)w='crew';else if(imps>=crew)w='imp';else if(G.done>=G.total)w='crew';
+  let w=null;if(imps===0)w='crew';else if(imps>=crew)w='imp';else if(G.total>0&&G.done>=G.total)w='crew';
   if(!w)return false;
   const why=w==='crew'?(imps===0?'Every impostor was eliminated.':'All crew tasks are finished.'):'Too few crew remain to stop the impostors.';
   const roster=G.players.map(p=>({n:p.name,c:(p.skin&&p.skin.color)||p.color,imp:p.imp,alive:p.alive}));
@@ -2403,39 +2410,80 @@ function checkWin(){
    PART 5: bots, meetings, player control, main loop, boot
    ==================================================================== */
 /* ---------- bots ---------- */
-function walkBot(b,dt){
+function walkBot(b,dt,mult){
   if(!b.path.length)return true;
   const t=b.path[0],dx=t.x-b.x,dy=t.y-b.y,d=Math.hypot(dx,dy);
   if(d<10){b.path.shift();return !b.path.length}
-  const s=Math.min(d,BOT_SPEED*dt);b.x+=dx/d*s;b.y+=dy/d*s;b.ang=Math.atan2(dx,dy);b.moving=true;return false;
+  const s=Math.min(d,BOT_SPEED*(mult||1)*dt);b.x+=dx/d*s;b.y+=dy/d*s;b.ang=Math.atan2(dx,dy);b.moving=true;return false;
 }
 function goTo(b,x,y,goal){b.path=findPath(b.x,b.y,x,y);b.goal=goal||{type:'wander'};b.state='walk'}
+const crewLeft=()=>G.players.filter(p=>p.alive&&!p.imp);
+const tasksDone=b=>b.tasks.every(id=>b.doneT.has(id));
 function observe(b){
   b.lastRoom=roomOf(b.x,b.y);
-  for(const p of G.players){if(p===b||!p.alive)continue;if(dist(p,b)<300&&clear(b.x,b.y,p.x,p.y))b.seen[p.id]={t:G.t,room:roomOf(p.x,p.y)}}
+  for(const p of G.players){if(p===b||!p.alive)continue;if(dist(p,b)<340&&clear(b.x,b.y,p.x,p.y))b.seen[p.id]={t:G.t,room:roomOf(p.x,p.y),x:p.x,y:p.y}}
   if(!b.imp&&!b.rep){
     for(const body of G.bodies){
       if(body.reported||clock<(body.visibleAt||0))continue;
-      if(dist(body,b)<280&&clear(b.x,b.y,body.x,body.y)){
+      if(dist(body,b)<320&&clear(b.x,b.y,body.x,body.y)){
         b.rep=body;
-        for(const p of G.players){if(p!==b&&p.alive&&dist(p,body)<280&&clear(p.x,p.y,body.x,body.y))b.susp[p.id]=(b.susp[p.id]||0)+2.5}
+        for(const p of G.players){if(p!==b&&p.alive&&dist(p,body)<300&&clear(p.x,p.y,body.x,body.y))b.susp[p.id]=(b.susp[p.id]||0)+2.5}
         break;
+      }
+    }
+    /* run from anyone I have good reason to fear, toward the nearest friend (or the button) */
+    if(b.state!=='flee'&&b.state!=='button'){
+      const dg=G.players.find(p=>p!==b&&p.alive&&(b.susp[p.id]||0)>=4&&dist(p,b)<240&&clear(b.x,b.y,p.x,p.y));
+      if(dg){
+        const ally=crewLeft().filter(p=>p!==b&&p!==dg&&(b.susp[p.id]||0)<2).sort((x,y)=>dist(x,b)-dist(y,b))[0],to=ally||BUTTON;
+        b.state='flee';b.timer=4;b.path=findPath(b.x,b.y,to.x,to.y);b.goal={type:'flee'};
       }
     }
   }
 }
-function isolated(v,killer){return !G.players.some(p=>p.alive&&!p.imp&&p!==v&&dist(p,killer)<340&&clear(p.x,p.y,killer.x,killer.y))}
+function isolated(v,killer){const R=G.sab&&G.sab.on?200:350;return !G.players.some(p=>p.alive&&!p.imp&&p!==v&&dist(p,killer)<R&&clear(p.x,p.y,killer.x,killer.y))}
+/* crew: pick the next task. Prefer close ones and busy places, avoid places a suspect was seen near */
+function pickTask(b){
+  let best,bs=1e9;
+  for(const id of b.tasks){
+    if(b.doneT.has(id))continue;
+    const S=STAND[id];let sc=Math.hypot(S.x-b.x,S.y-b.y);
+    for(const pid in b.susp){if(b.susp[pid]>=2){const q=G.players[pid],sn=b.seen[pid];if(q&&q.alive&&sn&&G.t-sn.t<30&&Math.hypot(sn.x-S.x,sn.y-S.y)<450)sc+=1000}}
+    sc-=crewLeft().filter(p=>p!==b&&Math.hypot(p.x-S.x,p.y-S.y)<380).length*110;
+    sc+=Math.random()*160;
+    if(sc<bs){bs=sc;best=id}
+  }
+  return best;
+}
+/* crew with nothing left to do: they keep playing instead of standing still */
+function freeTime(b){
+  const r=Math.random(),mates=crewLeft().filter(p=>p!==b);
+  if(r<.26){const a=rnd(0,6.28),rr=rnd(30,120);goTo(b,BUTTON.x+Math.cos(a)*rr,BUTTON.y+Math.sin(a)*rr,{type:'event',ev:'dance'})}
+  else if(r<.5&&mates.length){b.buddy=pick(mates);b.state='follow';b.timer=rnd(10,16);b.repath=0;b.goal={type:'event',ev:'follow'}}
+  else if(r<.76){const s=pick(STATIONS);goTo(b,STAND[s.id].x,STAND[s.id].y,{type:'event',ev:'inspect'})}
+  else if(r<.9){const v=pick(VENTS);goTo(b,v.x+rnd(-70,70),v.y+rnd(70,120),{type:'event',ev:'watch'})}
+  else{const p=randomPoint();goTo(b,p.x,p.y,{type:'event',ev:'stroll'})}
+}
 function chooseGoal(b){
   if(b.imp){
+    const dark=G.sab&&G.sab.on;
     if(b.cd<=0){
-      const c=G.players.filter(p=>p.alive&&!p.imp&&dist(p,b)<480&&clear(b.x,b.y,p.x,p.y)&&isolated(p,b));
+      const c=G.players.filter(p=>p.alive&&!p.imp&&dist(p,b)<720&&(dark||clear(b.x,b.y,p.x,p.y)||dist(p,b)<420)&&isolated(p,b));
       if(c.length){b.chase=c.sort((x,y)=>dist(x,b)-dist(y,b))[0];b.state='chase';b.repath=0;return}
     }
-    if(Math.random()<.3){const s=pick(STATIONS);goTo(b,STAND[s.id].x,STAND[s.id].y,{type:'fake'});return}
+    /* cut the lights when a crowd of crew is close and no one is alone */
+    if(b.sabcd<=0&&!dark&&b.cd<8&&crewLeft().filter(p=>dist(p,b)<380).length>=3){handleAct(b.id,'sab',{});b.sabcd=45;return}
+    /* wander toward crew who are on their own, otherwise pretend to do tasks */
+    const loners=crewLeft().filter(p=>isolated(p,b));
+    if(loners.length&&Math.random()<.5){const q=pick(loners);goTo(b,q.x+rnd(-120,120),q.y+rnd(-120,120));return}
+    if(Math.random()<.4){const s=pick(STATIONS);goTo(b,STAND[s.id].x,STAND[s.id].y,{type:'fake'});return}
     const p=randomPoint();goTo(b,p.x,p.y);return;
   }
-  const t=b.tasks.find(id=>!b.doneT.has(id));
-  if(t!==undefined&&Math.random()<.85){goTo(b,STAND[t].x,STAND[t].y,{type:'task',id:t});return}
+  /* crew fix the lights when they go out */
+  if(G.sab&&G.sab.on&&Math.random()<.6){const S=STAND[G.sab.id];goTo(b,S.x,S.y,{type:'fix'});return}
+  const t=pickTask(b);
+  if(t===undefined){freeTime(b);return}
+  if(Math.random()<.92){goTo(b,STAND[t].x,STAND[t].y,{type:'task',id:t});return}
   const p=randomPoint();goTo(b,p.x,p.y);
 }
 function duelBot(b,dt,d){
@@ -2457,8 +2505,10 @@ function botUpdate(b,dt){
   if(b.inDuel){const d=duelOf(b.id);if(d)duelBot(b,dt,d);return}
   if(b.jy)b.jy=0;
   b.moving=false;
-  b.look-=dt;if(b.look<=0){b.look=.4;observe(b)}
-  if(b.cd>0)b.cd-=dt;
+  b.look-=dt;if(b.look<=0){b.look=.3;observe(b)}
+  if(b.cd>0)b.cd-=dt;if(b.sabcd>0)b.sabcd-=dt;
+  /* a crewmate who watched a kill runs to the emergency button */
+  if(!b.imp&&b.wit&&b.wit.alive&&!b.em&&!b.rep&&b.state!=='button'){b.state='button';b.path=findPath(b.x,b.y,BUTTON.x,BUTTON.y);b.goal={type:'button'}}
   if(b.rep&&b.rep.reported){b.rep=null;b.state='idle'}
   if(!b.imp&&b.rep){
     if(b.state!=='rep'){b.state='rep';b.path=findPath(b.x,b.y,b.rep.x,b.rep.y)}
@@ -2469,20 +2519,48 @@ function botUpdate(b,dt){
   switch(b.state){
     case 'idle':b.timer-=dt;if(b.timer<=0)chooseGoal(b);break;
     case 'walk':if(walkBot(b,dt)){
-      if(b.goal&&b.goal.type==='task'){b.state='work';b.timer=rnd(6,10)}
+      if(b.goal&&b.goal.type==='task'){b.state='work';b.timer=rnd(4,7)}
       else if(b.goal&&b.goal.type==='fake'){b.state='work';b.timer=rnd(3,5)}
+      else if(b.goal&&b.goal.type==='fix'){handleAct(b.id,'fix',{});b.state='idle';b.timer=rnd(1,3)}
+      else if(b.goal&&b.goal.type==='vent'){
+        const far=VENTS.filter(v=>v.id!==b.goal.id).sort((x,y)=>Math.hypot(y.x-b.x,y.y-b.y)-Math.hypot(x.x-b.x,x.y-b.y)).slice(0,3),to=pick(far);
+        handleAct(b.id,'vent',{a:b.goal.id,b:to.id});b.x=to.x;b.y=to.y+40;b.path=[];b.state='idle';b.timer=rnd(1,3)}
+      else if(b.goal&&b.goal.type==='event'){b.state='event';b.ev=b.goal.ev;b.evT=0;b.timer=({dance:rnd(5,8),inspect:rnd(2.5,4),watch:rnd(6,9),stroll:rnd(1.5,3)})[b.ev]||3}
       else{b.state='idle';b.timer=rnd(1,4)}
     }break;
     case 'work':b.timer-=dt;if(b.timer<=0){
-      if(b.goal&&b.goal.type==='task'&&!b.doneT.has(b.goal.id)){b.doneT.add(b.goal.id);G.done++;checkWin()}
-      b.state='idle';b.timer=rnd(2,6);
+      if(b.goal&&b.goal.type==='task'&&!b.doneT.has(b.goal.id)){b.doneT.add(b.goal.id);checkWin()}
+      b.state='idle';b.timer=rnd(1,3.5);
     }break;
     case 'chase':{
       const v=b.chase;
-      if(!v||!v.alive||!isolated(v,b)||dist(v,b)>540){b.state='idle';b.timer=rnd(1,3);b.chase=null;break}
+      if(!v||!v.alive||!isolated(v,b)||dist(v,b)>800){b.state='idle';b.timer=rnd(1,3);b.chase=null;break}
       b.repath-=dt;if(b.repath<=0){b.path=findPath(b.x,b.y,v.x,v.y);b.repath=.5}
       walkBot(b,dt);
-      if(dist(v,b)<85){b.ang=Math.atan2(v.x-b.x,v.y-b.y);attemptKill(b,v);b.cd=rnd(22,30);b.chase=null;b.state='idle';b.timer=rnd(2,4);const p=randomPoint();goTo(b,p.x,p.y)}
+      if(dist(v,b)<85){b.ang=Math.atan2(v.x-b.x,v.y-b.y);attemptKill(b,v);b.cd=rnd(22,30);b.chase=null;b.state='idle';b.timer=rnd(2,4);
+        /* leave the scene: through a nearby vent half the time, otherwise on foot to somewhere far away */
+        if(b.inDuel)break;
+        const nv=VENTS.map(x=>({x,d:Math.hypot(x.x-b.x,x.y-b.y)})).sort((p,q)=>p.d-q.d)[0];
+        if(nv&&nv.d<320&&Math.random()<.55)goTo(b,nv.x.x,nv.x.y+40,{type:'vent',id:nv.x.id});
+        else{let p=randomPoint();for(let i=0;i<6;i++){const q=randomPoint();if(dist(q,b)>dist(p,b))p=q}goTo(b,p.x,p.y)}}
+    }break;
+    case 'flee':{b.timer-=dt;const done=walkBot(b,dt,1.25);if(done||b.timer<=0){b.state='idle';b.timer=rnd(.5,1.5)}}break;
+    case 'button':{
+      if(b.em||!b.wit||!b.wit.alive){b.state='idle';b.timer=1;break}
+      if(walkBot(b,dt,1.3)||dist(b,BUTTON)<110){handleAct(b.id,'button',{});b.state='idle';b.timer=2}
+    }break;
+    case 'follow':{
+      b.timer-=dt;const f=b.buddy;
+      if(!f||!f.alive||b.timer<=0){b.state='idle';b.timer=rnd(.5,2);break}
+      if(dist(b,f)>130){b.repath-=dt;if(b.repath<=0||!b.path.length){b.path=findPath(b.x,b.y,f.x,f.y);b.repath=.7}walkBot(b,dt)}
+      else b.ang=Math.atan2(f.x-b.x,f.y-b.y);
+    }break;
+    case 'event':{
+      b.timer-=dt;b.evT+=dt;
+      if(b.ev==='dance'){b.ang+=dt*5.5;b.jy=Math.abs(Math.sin(b.evT*7))*30}
+      else if(b.ev==='inspect')b.ang+=Math.sin(b.evT*3)*dt*4;
+      else if(b.ev==='watch')b.ang=Math.sin(b.evT*1.3)*1.8+Math.PI;
+      if(b.timer<=0){b.jy=0;b.state='idle';b.timer=rnd(.4,1.5)}
     }break;
   }
 }
@@ -2530,6 +2608,7 @@ function postChat(p,text,acc){
 function botVote(b){
   const cand=G.players.filter(p=>p.alive&&p!==b);
   if(b.imp){const crew=cand.filter(p=>!p.imp);if(!crew.length||Math.random()<.12)return 'skip';return String(crew.map(p=>({p,s:(M.acc[p.id]||0)+rnd(0,1.2)})).sort((a,c)=>c.s-a.s)[0].p.id)}
+  if(b.wit&&b.wit.alive&&b.wit!==b)return String(b.wit.id);
   const ranked=cand.map(p=>({p,s:b.susp[p.id]||0})).sort((a,c)=>c.s-a.s);
   if(ranked[0]&&ranked[0].s>=1.6)return String(ranked[0].p.id);
   return Math.random()<.75?'skip':String(pick(cand).id);
@@ -2718,7 +2797,7 @@ function frame(now){
   try{
     if(G){if(NET.isHost)hostUpdate(dt);else clientUpdate(dt);if((hudT-=dt)<=0){hudT=.1;updateHUD()}}
     tickLater();updateParticles(dt);
-    if(G&&me){updateAvatars(dt);updateBodies(dt);updateWorldObjects();updateCamera(dt);applyCull(cam.x,cam.y,800*cam.zoom*(W<700?1.3:1))}
+    if(G&&me){updateAvatars(dt);updateBodies(dt);updateWorldObjects();updateCamera(dt);applyCull(cam.x,cam.y,1000*cam.zoom*(W<700?1.3:1))}
     else{const a=clock*.05;camera.position.set(ISL.x+Math.cos(a)*1250,650,ISL.y+Math.sin(a)*880);camera.lookAt(ISL.x,0,ISL.y);applyCull(ISL.x,ISL.y,2600)}
     updateFog();updateMarkers();if(G&&me)drawMini(dt);
     positionTaskPanel();if(G&&((duelHudT-=dt)<=0)){duelHudT=.25;updateDuelHud()}
